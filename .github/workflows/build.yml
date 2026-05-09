@@ -1,0 +1,23 @@
+name: Build YahyaStealth CPP
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Compile CPP
+        run: cl.exe /O2 /EHsc main.cpp /Fe:YahyaStealth_Lite.exe user32.lib gdi32.lib
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: YahyaLite-Exe
+          path: YahyaStealth_Lite.exe
+          
