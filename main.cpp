@@ -1,7 +1,8 @@
-#include <windows.h>
-#include <vector>
-#include <chrono>
-#include <thread>
+#include <windows.h>   // Hatanın ana sebebi buydu, VK_ tuşları için şart.
+#include <vector>      // Liste işlemleri için.
+#include <chrono>      // Zamanlama (ms) için.
+#include <thread>      // Arka planda oynatma (PlayMacro) için.
+#include <string>      // Yazılar için.
 
 #pragma comment(lib, "user32.lib")
 
@@ -13,7 +14,7 @@ struct MacroEvent {
     long long timeOffset;
 };
 
-// --- TUŞ ATAMALARI (Buradan Değiştirebilirsin) ---
+// --- TUŞ ATAMALARI ---
 int KEY_RECORD_START = VK_F1;
 int KEY_RECORD_STOP  = VK_F2;
 int KEY_PLAY_ONCE    = VK_F3;
@@ -34,7 +35,6 @@ void PlayEngine() {
         for (const auto& ev : macroData) {
             if (!isPlaying) break;
 
-            // Zamanlama Bypass (G300s Hassasiyeti)
             while (std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - start).count() < ev.timeOffset) {
                 std::this_thread::sleep_for(std::chrono::microseconds(100));
@@ -67,12 +67,11 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
                       LoadCursor(NULL, IDC_ARROW), (HBRUSH)(COLOR_WINDOW+1), NULL, "YahyaMacroV2", NULL };
     RegisterClassEx(&wc);
     HWND hwnd = CreateWindowEx(0, "YahyaMacroV2", "Yahya G300s Style Pro", WS_OVERLAPPEDWINDOW, 
-                               CW_USEDEFAULT, CW_USEDEFAULT, 400, 280, NULL, NULL, hI, NULL);
+                               CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, NULL, NULL, hI, NULL);
     ShowWindow(hwnd, nS);
 
-    // Ekranda Tuş Atamalarını Göster
-    std::string info = "TUS ATAMALARI:\n\nF1: Kaydi Baslat\nF2: Kaydi Durdur\nF3: Oynat (1 Kez)\nF4: Sonsuz Dongu\nF5: ACIL DURDUR\n\nDurum: Beklemede...";
-    HWND lbl = CreateWindow("STATIC", info.c_str(), WS_CHILD | WS_VISIBLE, 20, 20, 350, 200, hwnd, NULL, hI, NULL);
+    std::string info = "F1: Kayit Baslat\nF2: Kayit Durdur\nF3: Oynat (1 Kez)\nF4: Sonsuz Dongu\nF5: DURDUR";
+    CreateWindow("STATIC", info.c_str(), WS_CHILD | WS_VISIBLE, 20, 20, 350, 200, hwnd, NULL, hI, NULL);
 
     MSG msg;
     auto recStart = std::chrono::steady_clock::now();
@@ -85,16 +84,13 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
             DispatchMessage(&msg);
         }
 
-        // --- TUŞ ATAMA KONTROLLERİ ---
         if (GetAsyncKeyState(KEY_RECORD_START) & 0x8000 && !isRecording) {
             macroData.clear();
             recStart = std::chrono::steady_clock::now();
             isRecording = true;
-            SetWindowText(hwnd, "KAYITTA...");
         }
         if (GetAsyncKeyState(KEY_RECORD_STOP) & 0x8000 && isRecording) {
             isRecording = false;
-            SetWindowText(hwnd, "Kayit Hazir.");
         }
         if (GetAsyncKeyState(KEY_PLAY_ONCE) & 0x8000 && !isRecording && !isPlaying) {
             loopMode = 1;
@@ -106,13 +102,11 @@ int WINAPI WinMain(HINSTANCE hI, HINSTANCE hP, LPSTR lpC, int nS) {
         }
         if (GetAsyncKeyState(KEY_PANIC_STOP) & 0x8000) isPlaying = false;
 
-        // --- KAYIT MOTORU ---
         if (isRecording) {
             long long offset = std::chrono::duration_cast<std::chrono::milliseconds>(
                 std::chrono::steady_clock::now() - recStart).count();
-            
             POINT p; GetCursorPos(&p);
-            macroData.push_back({0, p.x, p.y, 0, false, offset}); // Mouse Hareket
+            macroData.push_back({0, p.x, p.y, 0, false, offset});
 
             for (int i = 0; i < 256; i++) {
                 if (i == KEY_RECORD_START || i == KEY_RECORD_STOP) continue;
